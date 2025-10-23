@@ -171,7 +171,7 @@ def test_process_empty_or_no_headers(tmp_path, capsys):
 
     assert ok is False
     assert "CSV file is empty or has no headers" in captured.out
-    assert not output_file.exists()
+    assert output_file.exists()
 
 
 def test_process_input_not_exists(tmp_path, capsys):

@@ -277,34 +277,29 @@ class ContactNormalizer:
             # Ensure output folder exists
             self.output_file.parent.mkdir(parents=True, exist_ok=True)
 
-            normalized_rows: List[dict[str, str | None]] = []
+            with (open(self.input_file, 'r', encoding='utf-8-sig', newline='') as infile,
+                  open(self.output_file, 'w', encoding='utf-8', newline='') as outfile):
 
-            with open(self.input_file, 'r', encoding='utf-8-sig', newline='') as infile:
-                # Semicolon delimiter as requested
                 reader = csv.DictReader(infile, delimiter=CSV_DELIMITER)
 
                 if reader.fieldnames is None:
                     print("Error: CSV file is empty or has no headers", flush=True)
                     return False
 
+                writer = csv.DictWriter(outfile, fieldnames=['id', 'phone', 'dob'], delimiter=CSV_DELIMITER)
+                writer.writeheader()
+
                 for idx, row in enumerate(reader, start=2):  # data starts after header line
                     self.stats.total += 1
                     try:
                         normalized_row = self.normalize_row(row)
-                        normalized_rows.append(normalized_row)
+                        writer.writerow(normalized_row)
                         self.stats.normalized += 1
                     except Exception as e:
                         self.stats.skipped += 1
                         row_lower = {str(k).lower().strip(): (v.strip() if isinstance(v, str) else "") for k, v in row.items()}
                         contact_id = row_lower.get('id', 'unknown')
                         self.stats.errors.append(f"Row {idx} (ID: {contact_id}): {e}")
-
-            # Write results
-            with open(self.output_file, 'w', encoding='utf-8', newline='') as outfile:
-                writer = csv.DictWriter(outfile, fieldnames=['id', 'phone', 'dob'], delimiter=CSV_DELIMITER)
-                writer.writeheader()
-                if normalized_rows:
-                    writer.writerows(normalized_rows)
 
             return True
 
