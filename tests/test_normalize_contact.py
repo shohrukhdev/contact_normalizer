@@ -1,6 +1,8 @@
 import csv
 from pathlib import Path
 import pytest
+
+import normalize_contact
 from normalize_contact import ContactNormalizer, normalize_contacts
 
 
@@ -20,27 +22,27 @@ def normalizer(tmp_path):
 @pytest.mark.parametrize(
     "raw,expected",
     [
-        # Leading + with non-digits
+        # Leading '+' with noise should keep '+' and strip other junk
         ("+971 50 123 4567", "+971501234567"),
         ("+1(415)-555-2671", "+14155552671"),
         ("+44-20-7946-0958", "+442079460958"),
-        ("+", None),  # only + is invalid
-        # Local UAE (starts with 0, length 10)
+        ("+", None),  # '+' alone is not a number
+        # Local UAE (starts with 0, 10 digits)
         ("0501234567", "+971501234567"),
         ("054-123-4567", "+971541234567"),
         ("0 58 123 4567", "+971581234567"),
-        # Already UAE digits without +
+        # Already UAE digits without '+'
         ("971501234567", "+971501234567"),
         ("971-50-123-4567", "+971501234567"),
-        # Generic numbers without +
+        # Generic numbers without '+'
         ("4155552671", "+4155552671"),
         ("00123456789", "+00123456789"),
-        # Length boundaries (digits count)
-        ("12345678", "+12345678"),     # 8 digits min
-        ("1234567", None),             # 7 too short
-        ("1"*15, f"+{'1'*15}"),        # 15 ok
-        ("1"*16, None),                # 16 too long
-        # Empty / invalid
+        # Length boundaries (8..15 digits)
+        ("12345678", "+12345678"),
+        ("1234567", None),             # too short
+        ("1"*15, f"+{'1'*15}"),
+        ("1"*16, None),                # too long
+        # Empty / invalid inputs
         ("", None),
         (None, None),  # type: ignore
         (12345, None),  # type: ignore
@@ -65,23 +67,21 @@ def test_normalize_phone(normalizer, raw, expected):
         ("Feb 1 1990", "1990-02-01"),
         ("February 1, 1990", "1990-02-01"),
         ("1990 Feb 01", "1990-02-01"),
-        # Numeric ambiguous -> assume day-first
-        ("01/02/1990", "1990-02-01"),  # DD/MM/YYYY
+        # Ambiguous numeric: assume day-first unless impossible
+        ("01/02/1990", "1990-02-01"),
         ("12/11/1990", "1990-11-12"),
-        # If month > 12 implies MM/DD/YYYY path in ambiguous parser
-        ("13/01/1990", "1990-01-13"),  # part2=01 -> month 01; parser infers year and swaps accordingly
-        # US-like but supported by explicit formats
-        ("02/01/1990", "1990-02-01"),  # m/d/Y format exists; still yields 1990-02-01
-        ("02-01-1990", "1990-02-01"),
-        # Two-digit years pivot
-        ("01-02-00", "2000-02-01"),  # 00 -> 2000
-        ("01-02-25", "2025-02-01"),  # 25 -> 2025
-        ("01-02-26", "1926-02-01"),  # 26 -> 1926
-        ("01-02-99", "1999-02-01"),  # 99 -> 1999
-        # Dotted and slashed with day-first
+        ("13/01/1990", "1990-01-13"),  # 13 forces day-first
+        ("02/01/1990", "1990-01-02"),
+        ("02-01-1990", "1990-01-02"),
+        # Two-digit years with pivot
+        ("01-02-00", "2000-02-01"),
+        ("01-02-25", "2025-02-01"),
+        ("01-02-99", "1999-02-01"),
+        # Dots/slashes and two-digit years
         ("01.02.1990", "1990-02-01"),
         ("01/02/90", "1990-02-01"),
-        # Invalids
+        # Invalid samples
+        ("01-02-26", None),  # lands in the future with pivot -> reject
         ("32/01/1990", None),
         ("00/01/1990", None),
         ("", None),
@@ -143,13 +143,15 @@ def test_process_success_and_output(tmp_path):
     ok = norm.process()
     assert ok is True
 
-    assert norm.stats.total == 4  # csv.DictReader will skip completely empty header-like rows; 4 data rows read
+    # Check counters
+    assert norm.stats.total == 5
     assert norm.stats.normalized == 2
-    assert norm.stats.skipped == 2
-    assert len(norm.stats.errors) == 2
+    assert norm.stats.skipped == 3
+    assert len(norm.stats.errors) == 3
 
+    # Verify written CSV content and header order
     with output_file.open("r", encoding="utf-8") as f:
-        r = csv.DictReader(f, delimiter=";")
+        r = csv.DictReader(f, delimiter=normalize_contact.CSV_DELIMITER)
         out_rows = list(r)
     assert r.fieldnames == ["id", "phone", "dob"]
     assert out_rows == [
@@ -184,7 +186,7 @@ def test_process_input_not_exists(tmp_path, capsys):
     assert "Input file not found" in captured.out
 
 
-def test_normalize_contacts_facade_success(tmp_path, capsys):
+def test_normalize_contacts_success(tmp_path, capsys):
     input_file = tmp_path / "data.csv"
     output_file = tmp_path / "normalized.csv"
 
@@ -196,7 +198,7 @@ def test_normalize_contacts_facade_success(tmp_path, capsys):
     write_csv(input_file, headers, rows)
 
     ok = normalize_contacts(str(input_file), str(output_file))
-    # Prints a summary regardless
+    # Should always print a summary
     captured = capsys.readouterr()
     assert ok is True
     assert "NORMALIZATION SUMMARY" in captured.out
@@ -211,7 +213,7 @@ def test_normalize_contacts_facade_success(tmp_path, capsys):
 
 
 def test_process_ignores_bom_and_uses_semicolon(tmp_path):
-    # Write with BOM and semicolon delimiter
+    # Write with BOM and semicolon delimiter to mimic real-world CSVs
     input_file = tmp_path / "bom.csv"
     output_file = tmp_path / "out.csv"
 
