@@ -16,6 +16,17 @@ id; phone; dob
 
     output is saved to data folder.
 
+3) Run with multiprocessing (auto-detect cores):
+
+    `docker run --rm -v "$(pwd)/data:/data" contact-normalizer:latest /data/contacts_sample_open.csv multiprocess`
+
+4) Run with specific number of cores (e.g., 4 cores):
+
+    `docker run --rm -v "$(pwd)/data:/data" contact-normalizer:latest /data/contacts_sample_open.csv multiprocess 4`
+
+Note: If the specified number of cores exceeds the actual physical cores available, the program will automatically use the available physical cores instead.
+
+
 Note: If you encounter permission error with data folder, try with granting permissions to the folder:
 `chmod 777 ./data`
 
@@ -35,6 +46,12 @@ Note: If you encounter permission error with data folder, try with granting perm
 
 #### Run (input CSV is semicolon-delimited)
 `python main.py contacts_sample_open.csv`
+
+#### Run with multiprocessing (auto-detect cores)
+`python main.py contacts_sample_open.csv multiprocess`
+
+#### Run with specific number of cores
+`python main.py contacts_sample_open.csv multiprocess 8`
 
 #### Run tests
 `python -m pytest -v`
