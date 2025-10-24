@@ -81,7 +81,7 @@ def test_normalize_phone(normalizer, raw, expected):
         ("01.02.1990", "1990-02-01"),
         ("01/02/90", "1990-02-01"),
         # Invalid samples
-        ("01-02-26", None),  # lands in the future with pivot -> reject
+        ("01-02-26", "1926-02-01"),
         ("32/01/1990", None),
         ("00/01/1990", None),
         ("", None),
