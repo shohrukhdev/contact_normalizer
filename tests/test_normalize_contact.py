@@ -2,8 +2,8 @@ import csv
 from pathlib import Path
 import pytest
 
-import normalize_contact
-from normalize_contact import ContactNormalizer, normalize_contacts
+import normalize_contacts
+from normalize_contacts import ContactNormalizer, normalize_contacts
 
 
 def write_csv(path: Path, headers, rows, delimiter=";"):

@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from normalize_contact import normalize_contacts
+from normalize_contacts import normalize_contacts
 
 
 def parse_args(args: list[str] = None) -> tuple[Path, int | None]:

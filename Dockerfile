@@ -21,7 +21,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY normalize_contact.py main.py /app/
+COPY normalize_contacts.py main.py /app/
 
 # Optional: add a demo CSV so the image can run without mounts
 # Comment out the next line if you prefer a purely external input workflow
