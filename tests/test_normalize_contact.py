@@ -15,7 +15,6 @@ def write_csv(path: Path, headers, rows, delimiter=";"):
 
 @pytest.fixture
 def normalizer(tmp_path):
-    # only call methods directly in unit tests
     return ContactNormalizer(input_file=str(tmp_path / "in.csv"), output_file=str(tmp_path / "out.csv"))
 
 
@@ -44,8 +43,8 @@ def normalizer(tmp_path):
         ("1"*16, None),                # too long
         # Empty / invalid inputs
         ("", None),
-        (None, None),  # type: ignore
-        (12345, None),  # type: ignore
+        (None, None),
+        (12345, None),
     ],
 )
 def test_normalize_phone(normalizer, raw, expected):
@@ -85,8 +84,8 @@ def test_normalize_phone(normalizer, raw, expected):
         ("32/01/1990", None),
         ("00/01/1990", None),
         ("", None),
-        (None, None),  # type: ignore
-        (123, None),  # type: ignore
+        (None, None),
+        (123, None),
         ("Feb 30 1990", None),
     ],
 )
@@ -151,7 +150,7 @@ def test_process_success_and_output(tmp_path):
 
     # Verify written CSV content and header order
     with output_file.open("r", encoding="utf-8") as f:
-        r = csv.DictReader(f, delimiter=normalize_contact.CSV_DELIMITER)
+        r = csv.DictReader(f, delimiter=normalize_contacts.CSV_DELIMITER)
         out_rows = list(r)
     assert r.fieldnames == ["id", "phone", "dob"]
     assert out_rows == [
@@ -213,7 +212,6 @@ def test_normalize_contacts_success(tmp_path, capsys):
 
 
 def test_process_ignores_bom_and_uses_semicolon(tmp_path):
-    # Write with BOM and semicolon delimiter to mimic real-world CSVs
     input_file = tmp_path / "bom.csv"
     output_file = tmp_path / "out.csv"
 

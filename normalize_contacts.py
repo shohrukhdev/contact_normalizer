@@ -285,7 +285,6 @@ class ContactNormalizer:
         if isinstance(self.max_workers, int) and self.max_workers > 0:
             available = os.cpu_count() or 1
             return max(1, min(self.max_workers, available))
-            # Should not reach here for single-process
         return 1
 
     def normalize_phone(self, phone: str) -> str | None:
